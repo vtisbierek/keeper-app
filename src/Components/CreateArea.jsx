@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import AddIcon from '@mui/icons-material/Add';
 import Fab from '@mui/material/Fab';
 import Zoom from '@mui/material/Zoom';
@@ -10,6 +10,18 @@ function CreateArea(props) {
   });
 
   const [isExpanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    window.addEventListener("click", (event) => {
+      const target = event.target;
+      
+      if(target.name !== "content" && target.name !== "title"){
+        setExpanded(false);
+      }
+      
+    });
+
+  }, [isExpanded]);
 
   function handleInput(event){
       const {value, name} = event.target;
