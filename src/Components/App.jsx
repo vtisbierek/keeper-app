@@ -10,7 +10,7 @@ function App(){
     const [isPosted, setPosted] = useState(false);
 
     useEffect(() => {
-        fetch("http://localhost:8000/")
+        fetch(process.env.REACT_APP_BACKEND_API)
           .then((res) => res.json())
           .then((data) => {
             setItems(data.map(entry => {
@@ -20,12 +20,11 @@ function App(){
                 };
             }));
         });
-        console.log("oi");
     }, []);
 
     useEffect(() => {
         if(isPosted){
-            fetch("http://localhost:8000/", {
+            fetch(process.env.REACT_APP_BACKEND_API, {
                 method: "POST", 
                 mode: "cors",
                 headers: { 'Content-Type': 'application/json' }, 
