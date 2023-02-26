@@ -2,14 +2,18 @@ import React, {useState, useEffect} from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import Note from "./Note";
-/* import notes from "../notes"; */
 import CreateArea from "./CreateArea";
+import {getGoogleInfo} from "../googleApi";
 
 function App(){
     const [items, setItems] = useState([]);
     const [isPosted, setPosted] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     useEffect(() => {
+
+        handleTokenFromQueryParams();
+
         fetch(process.env.REACT_APP_BACKEND_API)
           .then((res) => res.json())
           .then((data) => {
@@ -31,8 +35,6 @@ function App(){
                 body: JSON.stringify(items)
             });
         }
-        console.log("hey");
-
         setPosted(false);
 
     }, [isPosted]);
@@ -55,14 +57,68 @@ function App(){
         setPosted(true);
     }
 
+    const createGoogleAuthLink = async () => {
+        try {
+          const request = await fetch(process.env.REACT_APP_BACKEND_AUTH_URL, {
+            method: "POST",
+          });
+          const response = await request.json();
+          window.location.href = response.url;
+        } catch (error) {
+          console.log("App.js 12 | error", error);
+          throw new Error("Issue with Login", error.message);
+        }
+    };
+
+    const handleTokenFromQueryParams = () => {
+        const query = new URLSearchParams(window.location.search);
+        const accessToken = query.get("accessToken");
+        const refreshToken = query.get("refreshToken");
+        const expirationDate = newExpirationDate();
+        console.log("App.js 30 | expiration Date", expirationDate);
+        if (accessToken && refreshToken) {
+          storeTokenData(accessToken, refreshToken, expirationDate);
+          setIsLoggedIn(true);
+        }
+    };
+
+    const newExpirationDate = () => {
+        var expiration = new Date();
+        expiration.setHours(expiration.getHours() + 1);
+        return expiration;
+    };
+
+    const storeTokenData = async (token, refreshToken, expirationDate) => {
+        sessionStorage.setItem("accessToken", token);
+        sessionStorage.setItem("refreshToken", refreshToken);
+        sessionStorage.setItem("expirationDate", expirationDate);
+    };
+
+    const signOut = () => {
+        setIsLoggedIn(false);
+        sessionStorage.clear();
+    };
+
+    function handleLoginLogic(){
+        if(!isLoggedIn){
+            createGoogleAuthLink(); 
+        } else {
+            signOut();
+        }
+    }
+
+    if(isLoggedIn){
+        const userData = getGoogleInfo();
+        console.log(userData);
+    }
+
     return(
         <>
-            <Header name="Keeper" />
+            <Header name="Keeper" handleLogin={handleLoginLogic} />
             <CreateArea onAdd={addItem} />
             {items.map((item, index) => {
                 return <Note key={index} id={index} title={item.title} content={item.content} onDelete={deleteItem} />;
             })}
-            {/* {notes.map(note => (<Note key={note.key} title={note.title} content={note.content} />))} */}
             <Footer />
         </>
     );
