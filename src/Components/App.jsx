@@ -143,6 +143,7 @@ function App(){
     };
 
     const signOut = () => {
+        console.log("se foi 0");
         fetch(process.env.REACT_APP_BACKEND_REVOKE_AUTH_URL, {
             method: "POST", 
             mode: "cors",
