@@ -19,7 +19,7 @@ header {
   box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.3);
 }
 
-header h1 {
+header h1, .logout span {
   color: #fff;
   font-family: "McLaren", cursive;
   font-weight: 200;
@@ -29,7 +29,15 @@ header h1 {
   text-align: right;
 }
 
-.login{
+.login, .logout{
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.logout img {
+  margin: 5px;
+  border-radius: 50%;
+  height: 50px;
   width: 50px;
 }
 
