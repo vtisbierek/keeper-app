@@ -184,7 +184,7 @@ function App(){
     return(
         <>
             <Header name="Keeper" handleLogin={loginUser} handleLogout={logoutUser} isReady={isUserReady} imgURL={userData.picture} userName={userData.fullName} />
-            <CreateArea onAdd={addItem} />
+            {isUserReady && <CreateArea onAdd={addItem} />}
             {isUserReady && items.map((item, index) => {
                 return <Note key={index} id={index} title={item.title} content={item.content} onDelete={deleteItem} />;
             })}
