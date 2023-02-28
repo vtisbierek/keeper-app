@@ -13,12 +13,15 @@ function App(){
     const [userData, setUserData] = useState({});
 
     useEffect(() => {
-        handleTokenFromQueryParams(false);
+        console.log(sessionStorage, "sessionStorage");
+        handleTokenFromQueryParams();
     }, []);
     
     useEffect(() => {
         if(isUserReady){
-            console.log("user ready");
+            if(sessionStorage.sessionStarting === "true"){
+                startNewSession();
+            }
 
             const searchParam = encodeURIComponent(userData.sub);
             fetch(process.env.REACT_APP_BACKEND_API+"?author="+searchParam)
@@ -107,13 +110,34 @@ function App(){
           });
           const response = await request.json();
           window.location.href = response.url;
+
         } catch (error) {
           console.log("App.js 12 | error", error);
           throw new Error("Issue with Login", error.message);
         }
     };
 
-    const handleTokenFromQueryParams = async (login) => {
+    const startNewSession = async () => {
+        const query = new URLSearchParams(window.location.search);
+        const token = query.get("accessToken");
+
+        const sessionToken = {
+            token: token,
+            authorization: true
+        };
+
+        console.log(sessionStorage, "dentro");
+        await fetch(process.env.REACT_APP_BACKEND_CHECK_AUTH_URL, {
+            method: "POST",
+            mode: "cors",
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(sessionToken)
+        });
+        sessionStorage.setItem("sessionStarting", false);
+        sessionStorage.setItem("sessionStarted", true);
+    };
+
+    const handleTokenFromQueryParams = async () => {
         const query = new URLSearchParams(window.location.search);
         const accessToken = query.get("accessToken");
         const refreshToken = query.get("refreshToken");
@@ -121,19 +145,17 @@ function App(){
         const expirationDate = newExpirationDate();
         console.log("App.js 30 | expiration Date", expirationDate);
 
-        let conditionalAcceptance = login;
+        let conditionalAcceptance = true;
 
-        if(!login){
-            console.log(userData, "userData no momento do auth check");
-            const userInfo = await getGoogleInfo();
-            const searchParam = encodeURIComponent(userInfo.sub);
-            conditionalAcceptance = await fetch(process.env.REACT_APP_BACKEND_CHECK_AUTH_URL+"?author="+searchParam)
+        if(sessionStorage.sessionStarted === "true" || sessionStorage.sessionEnded === "true"){           
+            const searchParam = encodeURIComponent(accessToken);
+            conditionalAcceptance = await fetch(process.env.REACT_APP_BACKEND_CHECK_AUTH_URL+"?token="+searchParam)
             .then((res) => res.json())
             .then((data) => {
                 console.log(data, "retorno de auth check");
                 return data;
             });
-        } 
+        }
 
         if (conditionalAcceptance && accessToken && refreshToken) {
             console.log("set is logged in");
@@ -155,26 +177,28 @@ function App(){
     };
 
     const signOut = () => {
-        const revoke = {
-            author: userData.sub
+        const revokeToken = {
+            token: sessionStorage.accessToken,
         }
 
         fetch(process.env.REACT_APP_BACKEND_REVOKE_AUTH_URL, {
             method: "POST", 
             mode: "cors",
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(revoke)
+            body: JSON.stringify(revokeToken)
         });
 
         setIsLoggedIn(false);
         setUserData({});
         setUserReady(false);
         sessionStorage.clear();
+        sessionStorage.setItem("sessionEnded", true); //como já tinha uma sessão em andamento, eu deixo essa flag marcada
     };
 
     function loginUser(){
+        sessionStorage.setItem("sessionEnded", false);
+        sessionStorage.setItem("sessionStarting", true);
         createGoogleAuthLink();
-        handleTokenFromQueryParams(true);
     }
 
     function logoutUser(){
