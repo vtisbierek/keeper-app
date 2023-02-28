@@ -13,13 +13,14 @@ function App(){
     const [userData, setUserData] = useState({});
 
     useEffect(() => {
-        handleTokenFromQueryParams();
+        handleTokenFromQueryParams(false);
     }, []);
     
     useEffect(() => {
         if(isUserReady){
+            console.log("user ready");
+
             const searchParam = encodeURIComponent(userData.sub);
-            console.log(isUserReady, searchParam, "get request");
             fetch(process.env.REACT_APP_BACKEND_API+"?author="+searchParam)
             .then((res) => res.json())
             .then((data) => {
@@ -36,11 +37,18 @@ function App(){
 
     useEffect(() => {
         if(isPosted){
+            console.log("is posted");
+
+            let itemsToSend = [...items];
+            itemsToSend.push(userData.sub);
+
+            console.log(itemsToSend, "itemsToSend");
+
             fetch(process.env.REACT_APP_BACKEND_API, {
                 method: "POST", 
                 mode: "cors",
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(items)
+                body: JSON.stringify(itemsToSend)
             });
         }
         setPosted(false);
@@ -61,6 +69,7 @@ function App(){
         }
 
         if(isLoggedIn){
+            console.log("get user data");
             getUserData();
         }
 
@@ -74,23 +83,20 @@ function App(){
 
     function addItem(newItem){
         newItem.author = userData.sub;
-    
         setItems((prevItems) => {
-            console.log(prevItems);
+            console.log(prevItems, "xx");
             return [...prevItems, newItem];
         })
-
         setPosted(true);
     }
 
     function deleteItem(id){
         setItems((prevItems) => {
-            console.log(prevItems);
+            console.log(prevItems, "yy");
             return prevItems.filter((item, index) => {
                 return index !== id;
             });
         });
-
         setPosted(true);
     }
 
@@ -107,26 +113,32 @@ function App(){
         }
     };
 
-    const handleTokenFromQueryParams = async () => {
+    const handleTokenFromQueryParams = async (login) => {
         const query = new URLSearchParams(window.location.search);
-
         const accessToken = query.get("accessToken");
         const refreshToken = query.get("refreshToken");
 
         const expirationDate = newExpirationDate();
         console.log("App.js 30 | expiration Date", expirationDate);
 
-        const isValidAuth = await fetch(process.env.REACT_APP_BACKEND_CHECK_AUTH_URL)
+        let conditionalAcceptance = login;
+
+        if(!login){
+            console.log(userData, "userData no momento do auth check");
+            const userInfo = await getGoogleInfo();
+            const searchParam = encodeURIComponent(userInfo.sub);
+            conditionalAcceptance = await fetch(process.env.REACT_APP_BACKEND_CHECK_AUTH_URL+"?author="+searchParam)
             .then((res) => res.json())
             .then((data) => {
+                console.log(data, "retorno de auth check");
                 return data;
             });
+        } 
 
-        console.log(isValidAuth, "isValidAuth");
-
-        if (isValidAuth && accessToken && refreshToken) {
-          storeTokenData(accessToken, refreshToken, expirationDate);
-          setIsLoggedIn(true);
+        if (conditionalAcceptance && accessToken && refreshToken) {
+            console.log("set is logged in");
+            storeTokenData(accessToken, refreshToken, expirationDate);
+            setIsLoggedIn(true);
         }
     };
 
@@ -143,12 +155,15 @@ function App(){
     };
 
     const signOut = () => {
-        console.log("se foi 0");
+        const revoke = {
+            author: userData.sub
+        }
+
         fetch(process.env.REACT_APP_BACKEND_REVOKE_AUTH_URL, {
             method: "POST", 
             mode: "cors",
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({auth: "revoke"})
+            body: JSON.stringify(revoke)
         });
 
         setIsLoggedIn(false);
@@ -158,7 +173,8 @@ function App(){
     };
 
     function loginUser(){
-        createGoogleAuthLink();  
+        createGoogleAuthLink();
+        handleTokenFromQueryParams(true);
     }
 
     function logoutUser(){
